@@ -1,13 +1,14 @@
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, MetaData
 from sqlalchemy import String, Integer, Boolean
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, declarative_base
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
 
 
-class Base(DeclarativeBase):
-    pass
+metadata = MetaData()
+
+Base = declarative_base(metadata=metadata)
 
 
 class User(Base):
