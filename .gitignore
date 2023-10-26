@@ -1,5 +1,10 @@
 venv
 .env
+*.tmp*
+
+# Draw.io tmp files
+*.drawio.bkp
+*.drawio.dtmp
 
 # Editors
 .idea
