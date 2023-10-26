@@ -3,14 +3,13 @@ from random import randint
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from dotenv import load_dotenv
 from asyncio import run as run_async, sleep
 from logger import logger
 
 
 async def main() -> None:
     from bot import bot
-    from config import admin_id, new_task_message, short_new_task_message
+    from config import TG_ADMIN_ID, new_task_message, short_new_task_message
     from platforms.freelance_ru import Freelance_ru
     from platforms.fl_ru import Fl_ru
 
@@ -29,7 +28,7 @@ async def main() -> None:
                     message = short_new_task_message.format(platform=platform.__class__.__name__, **task)
                 try:
                     await bot.send_message(
-                        admin_id,
+                        TG_ADMIN_ID,
                         text=message,
                         parse_mode=ParseMode.HTML,
                         reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
@@ -46,5 +45,4 @@ async def main() -> None:
 
 
 if __name__ == '__main__':
-    load_dotenv()
     run_async(main())
