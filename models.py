@@ -1,5 +1,5 @@
 from sqlalchemy import ForeignKey, MetaData
-from sqlalchemy import String, Integer, Boolean
+from sqlalchemy import String, INT, Boolean, BIGINT
 from sqlalchemy.orm import DeclarativeBase, declarative_base
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
@@ -14,7 +14,7 @@ Base = declarative_base(metadata=metadata)
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(Integer(), primary_key=True)
+    id: Mapped[int] = mapped_column(INT(), primary_key=True)
     blocked: Mapped[bool] = mapped_column(Boolean())
 
     subscriptions: Mapped["Subscribe"] = relationship(back_populates="addresses")
@@ -29,7 +29,7 @@ class Services(Base):
     """
     __tablename__ = "services"
 
-    id: Mapped[int] = mapped_column(Integer(), primary_key=True)
+    id: Mapped[int] = mapped_column(INT(), primary_key=True)
     name: Mapped[str] = mapped_column(String(20))
     base_url: Mapped[str] = mapped_column(String())
     activated: Mapped[bool] = mapped_column(Boolean(), default=False)
@@ -44,7 +44,7 @@ class Subscription(Base):
     """
     __tablename__ = "subscriptions"
 
-    id: Mapped[int] = mapped_column(Integer(), primary_key=True)
+    id: Mapped[int] = mapped_column(BIGINT(), primary_key=True)
     url: Mapped[str] = mapped_column(String(length=150))
 
     service_id: Mapped[int] = mapped_column(ForeignKey("services.id"))
@@ -56,7 +56,7 @@ class Subscribe(Base):
     """
     __tablename__ = "user_subscriptions"
 
-    id: Mapped[int] = mapped_column(Integer(), primary_key=True)
+    id: Mapped[int] = mapped_column(INT(), primary_key=True)
 
     subscription_id: Mapped[int] = mapped_column(ForeignKey("subscriptions.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
@@ -68,7 +68,7 @@ class Task(Base):
     """
     __tablename__ = "tasks"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(BIGINT(), primary_key=True)
     service_id: Mapped[int] = mapped_column(ForeignKey("services.id"))
     title: Mapped[str] = mapped_column(String(50))
     description: Mapped[str] = mapped_column(String(600))
@@ -83,6 +83,6 @@ class Task(Base):
 class TaskViewStatus(Base):
     __tablename__ = "task_views"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(BIGINT(), primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
