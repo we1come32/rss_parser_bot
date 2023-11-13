@@ -7,13 +7,19 @@ from loguru import logger
 from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
 
-from models import engine, Service
+from models import engine, Service, User
 
 dp = Dispatcher()
 
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
+    if not message.from_user:
+        return
+    with Session(engine) as ss:
+        if not ss.execute(select(User).where(User.id == message.from_user.id)).fetchall():
+            ss.execute(insert(User).values([(message.from_user.id, False)]))
+            ss.commit()
     await message.answer(f"Привет!")
 
 
