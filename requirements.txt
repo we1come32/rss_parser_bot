@@ -9,3 +9,6 @@ SQLAlchemy~=2.0.22
 alembic~=1.12.1
 bs4~=0.0.1
 psycopg2-binary~=2.9.9
+feedparser~=6.0.10
+httpx~=0.25.1
+pydantic~=2.3.0
