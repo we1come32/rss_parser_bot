@@ -1,47 +1,28 @@
-from random import randint
-
-from aiogram.enums import ParseMode
-from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from asyncio import run as run_async, sleep
+from asyncio import run as run_async, get_running_loop, sleep
 from logger import logger
 
 
-async def main() -> None:
+async def main():
+    from utils.worker import run
+    from utils.chat_worker import dp
     from bot import bot
-    from config import TG_ADMIN_ID, new_task_message, short_new_task_message
-    from platforms.freelance_ru import Freelance_ru
-    from platforms.fl_ru import Fl_ru
 
-    platforms = [
-        Fl_ru(),
-        Freelance_ru(),
-    ]
+    background_tasks = set()
 
-    while True:
-        for platform in platforms:
-            for task in platform.get_new_tasks():
-                logger.success("New task! Platform={platform_name} {task}", task=task,
-                               platform_name=platform.__class__.__name__)
-                message = new_task_message.format(platform=platform.__class__.__name__, **task)
-                if len(message) > 4096:
-                    message = short_new_task_message.format(platform=platform.__class__.__name__, **task)
-                try:
-                    await bot.send_message(
-                        TG_ADMIN_ID,
-                        text=message,
-                        parse_mode=ParseMode.HTML,
-                        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                           InlineKeyboardButton(text='Открыть задачу',
-                                                url=task['href'])
-                        ]])
-                    )
-                    await sleep(2)
-                except TelegramBadRequest:
-                    logger.exception("Telegram invalid exception. Length: {length}\nMessage: {msg}",
-                                     length=len(message), msg=message)
+    logger.info("Starting tasks")
+    loop = get_running_loop()
+    for task, name in [(run(), "RSS-parser"), (dp.start_polling(bot), "Telegram bot")]:
+        task = loop.create_task(task)
+        task.set_name(name)
+        logger.info("Task {name} is started", name=task.get_name())
+        background_tasks.add(task)
+        task.add_done_callback(background_tasks.discard)
 
-        await sleep(randint(90, 240))
+    while background_tasks:
+        for task in background_tasks:
+            await task
+            logger.warning("Task {name} is stopped", name=task.get_name())
+        await sleep(1)
 
 
 if __name__ == '__main__':
