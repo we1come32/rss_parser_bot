@@ -1,6 +1,10 @@
-from sqlalchemy import ForeignKey, MetaData, create_engine
-from sqlalchemy import String, INT, Boolean, BIGINT
-from sqlalchemy.orm import DeclarativeBase, declarative_base
+from datetime import datetime
+from typing import Tuple
+
+from loguru import logger
+from sqlalchemy import ForeignKey, MetaData, create_engine, select, insert
+from sqlalchemy import String, INT, Boolean, BIGINT, DateTime
+from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
@@ -27,12 +31,13 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(INT(), primary_key=True)
-    blocked: Mapped[bool] = mapped_column(Boolean())
+    blocked: Mapped[bool] = mapped_column(Boolean(), default=False)
+    language: Mapped[str] = mapped_column(String(8), default="en", nullable=True)
 
-    subscriptions: Mapped["Subscribe"] = relationship()#back_populates="addresses")
+    subscriptions: Mapped["Subscribe"] = relationship()
 
     def __repr__(self):
-        return f"<User id={self.id}>"
+        return f"<User id={self.id} blocked={self.blocked}>"
 
 
 class Service(Base):
@@ -101,3 +106,44 @@ class TaskViewStatus(Base):
     id: Mapped[int] = mapped_column(BIGINT(), primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(BIGINT(), primary_key=True, autoincrement=True)
+    message: Mapped[str] = mapped_column(String(512))
+    language: Mapped[str] = mapped_column(String(8))
+    original_id: Mapped[str] = mapped_column(ForeignKey("messages.id"))
+
+    last_usage: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    def translate(self, lang: str) -> Tuple[str, bool]:
+        with Session(engine) as ss:
+            req = select(Message).values(original_id=self.id, language=lang)
+            res = ss.execute(req).fetchall()
+            if res:
+                return res[0][0].message, True
+        return "", False
+
+    @staticmethod
+    def get_translate(message: str, lang: str = "en"):
+        if lang == "en":
+            return message
+        req = select(Message).where(Message.message == message)
+        translated = False
+        with Session(engine) as ss:
+            msgs = ss.execute(req).fetchall()
+            if msgs:
+                # Если такое сообщение было найдено в программе раньше, то ищем для него перевод в базе
+                msg: Message = msgs[0][0]
+                message, translated = msg.translate(lang)
+            else:
+                # Иначе создаём данный текст в базе данных
+                req = insert(Message).values(message=message, language="en",
+                                             original_id=None, last_usage=datetime.now())
+                ss.execute(req)
+            ss.commit()
+        if not translated:
+            logger.warning("Message \"{msg}\" is not translated into \"{lang}\" language", msg=message, lang=lang)
+        return message
