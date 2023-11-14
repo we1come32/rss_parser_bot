@@ -9,7 +9,8 @@ from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
 
 from config import TG_ADMIN_ID
-from models import engine, Service, User, Subscription, Subscribe
+from models import engine, Service, User, Subscription, Subscribe, Message as MessageUtil
+from utils.decorators.get_user import get_user
 
 
 class DevBotFilter(BaseFilter):
@@ -22,19 +23,25 @@ dp = Dispatcher()
 
 @dp.message(DevBotFilter(), CommandStart())
 async def command_start_handler(message: Message) -> None:
-    if not message.from_user:
-        return
-    with Session(engine) as ss:
-        if not ss.execute(select(User).where(User.id == message.from_user.id)).fetchall():
-            ss.execute(insert(User).values([(message.from_user.id, False)]))
-            ss.commit()
-    await message.answer(f"Привет!")
+    """
+    Обработчик для команды /start
+    """
+    user = get_user(message)
+    await message.answer(MessageUtil.get_translate("Привет!", user.language))
 
 
 @dp.message(DevBotFilter(), Command(commands=["add_rss", "add"]))
 async def add_rss(message: Message):
+    """
+    Обработчик для подписки на новости
+    """
+    user = get_user(message)
+    # Если сообщение не от пользователя, игнорируем
+    if not user:
+        return
     msg_text = message.text.split()
     result_message = "Please, send rss-link with this command."
+    kwargs = {}
     if len(msg_text) == 2:
         url = urlsplit(msg_text[1])
         with Session(engine) as ss:
@@ -44,7 +51,6 @@ async def add_rss(message: Message):
             if url.netloc and (services := ss.execute(rq).fetchall()):
                 service: Service = services[0][0]
                 if service.activated:
-
                     # Get or create url subscription
                     rq = select(Subscription).where(Subscription.url == url.geturl())
                     if (subs := ss.execute(rq).fetchall()):
@@ -61,12 +67,16 @@ async def add_rss(message: Message):
                     if not(ss.execute(rq).fetchall()):
                         ss.execute(insert(Subscribe).values(subscription_id=sub.id, user_id=message.from_user.id))
                     ss.commit()
-                    result_message = f"Hello, its working! You subscribe onto {url.geturl()!r}."
+                    result_message = "Hello, its working! You subscribe onto {url!r}."
+                    kwargs = dict(url=url.geturl())
                 else:
-                    result_message = f"Service from url {service.base_url} is not allowed."
+                    result_message = "Service from url {url!r} is not allowed."
+                    kwargs = dict(url=service.base_url)
             else:
                 result_message = "Unknown service or service is not allowed."
-    await message.reply(result_message)
+
+    # Отвечаем переведённым сообщением с нужными аргументами
+    await message.reply(MessageUtil.get_translation(result_message, user.language).format(**kwargs))
 
 
 @dp.message(Command(commands=["allow"]), F.from_user.id.in_([TG_ADMIN_ID]))
