@@ -24,6 +24,7 @@ async def run() -> None:
             for (sub, service) in session.execute(subscribes):
                 sub: Subscription
                 service: Service
+                continue
 
                 async for task in parse(url=sub.url):
                     logger.success("New task! Platform={platform_name} {task}", task=task,

@@ -31,8 +31,10 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(INT(), primary_key=True)
-    blocked: Mapped[bool] = mapped_column(Boolean(), default=False)
-    language: Mapped[str] = mapped_column(String(8), default="en", nullable=True)
+    language_id: Mapped[int] = mapped_column(ForeignKey('languages.id'), default=1)
+
+    is_blocked: Mapped[bool] = mapped_column(Boolean(), default=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean(), default=False)
 
     subscriptions: Mapped["Subscribe"] = relationship()
 
@@ -108,29 +110,41 @@ class TaskViewStatus(Base):
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
 
 
+class Language(Base):
+    __tablename__ = "languages"
+
+    id: Mapped[int] = mapped_column(BIGINT(), primary_key=True, autoincrement=True)
+    symbol: Mapped[str] = mapped_column(String(8))
+    name: Mapped[str] = mapped_column(String(32))
+    short_name: Mapped[str] = mapped_column(String(8))
+
+
 class Message(Base):
     __tablename__ = "messages"
 
     id: Mapped[int] = mapped_column(BIGINT(), primary_key=True, autoincrement=True)
     message: Mapped[str] = mapped_column(String(512))
-    language: Mapped[str] = mapped_column(String(8))
-    original_id: Mapped[str] = mapped_column(ForeignKey("messages.id"))
+    language_id: Mapped[int] = mapped_column(ForeignKey('languages.id'))
+    original_id: Mapped[str] = mapped_column(ForeignKey("messages.id"), nullable=True)
 
     last_usage: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
-    def translate(self, lang: str) -> Tuple[str, bool]:
+    def translate(self, lang: int) -> Tuple[str, bool]:
         with Session(engine) as ss:
-            req = select(Message).values(original_id=self.id, language=lang)
+            req = select(Message).where(
+                Message.original_id == self.id,
+                Message.language_id == lang
+            )
             res = ss.execute(req).fetchall()
             if res:
                 return res[0][0].message, True
-        return "", False
+        return self.message, False
 
     @staticmethod
-    def get_translate(message: str, lang: str = "en"):
-        if lang == "en":
+    def get_translate(message: str, lang: int = 1):
+        if lang == 1:
             return message
-        req = select(Message).where(Message.message == message)
+        req = select(Message).where(Message.message == message, Message.language_id == 1)
         translated = False
         with Session(engine) as ss:
             msgs = ss.execute(req).fetchall()
@@ -140,7 +154,7 @@ class Message(Base):
                 message, translated = msg.translate(lang)
             else:
                 # Иначе создаём данный текст в базе данных
-                req = insert(Message).values(message=message, language="en",
+                req = insert(Message).values(message=message, language_id=1,
                                              original_id=None, last_usage=datetime.now())
                 ss.execute(req)
             ss.commit()

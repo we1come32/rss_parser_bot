@@ -4,14 +4,17 @@ from logger import logger
 
 async def main():
     from utils.worker import run
-    from utils.chat_worker import dp
+    from utils.chat.worker import dp
     from bot import bot
 
     background_tasks = set()
 
     logger.info("Starting tasks")
     loop = get_running_loop()
-    for task, name in [(run(), "RSS-parser"), (dp.start_polling(bot), "Telegram bot")]:
+    for task, name in [
+        # (run(), "RSS-parser"),
+        (dp.start_polling(bot), "Telegram bot"),
+    ]:
         task = loop.create_task(task)
         task.set_name(name)
         logger.info("Task {name} is started", name=task.get_name())
