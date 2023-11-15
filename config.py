@@ -1,28 +1,24 @@
 from os import getenv
 
+from dotenv import load_dotenv
 
-bot_token = getenv('BOT_ACCESS_TOKEN')
-admin_id = getenv('ADMIN_TELEGRAM_ID')
-new_task_message = """<b>Новая задача! Платформа <i>{platform}</i></b>
 
-<b>Название</b>: <i>{title}</i>
-<b>Описание</b>: <i>{description}</i>
-<b>Сроки</b>: <i>{limit_time}</i>
-<b>Цена</b>: <i>{price}</i>
+load_dotenv()
 
-<b>Темы</b>: <i>{themes}</i>
 
-{published_date}. Автор: {author}
-"""
+# Database section
 
-short_new_task_message = """<b>Новая задача! Платформа <i>{platform}</i></b>
+DB_HOST = getenv("DB_HOST")
+DB_PORT = getenv("DB_PORT")
+DB_NAME = getenv("DB_NAME")
+DB_USER = getenv("DB_USER")
+DB_PASS = getenv("DB_PASS")
 
-<b>Название</b>: <i>{title}</i>
-<b>Описание</b> по ссылке ниже <i>(short msg)</i>
-<b>Сроки</b>: <i>{limit_time}</i>
-<b>Цена</b>: <i>{price}</i>
+# Telegram section
 
-<b>Темы</b>: <i>{themes}</i>
+BOT_TOKEN = getenv('BOT_ACCESS_TOKEN')
+TG_ADMIN_ID = getenv('ADMIN_TELEGRAM_ID')
 
-{published_date}. Автор: {author}
-"""
+# System section
+
+DEBUG = getenv('DEBUG', '').lower() in ['true', '1']
